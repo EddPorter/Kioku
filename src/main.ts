@@ -14,7 +14,7 @@ import { Attempt, computeStats, loadProgress, recordAttempt, saveProgress } from
 
 type Phase = 'home' | 'memorise' | 'reflect' | 'recall' | 'result' | 'stats';
 
-const GROUPS_PER_ROW = 5;
+const MAX_GROUPS_PER_ROW = 5;
 const DOUBLE_PRESS_MS = 600;
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -201,9 +201,20 @@ function reflectHtml(): string {
     <div class="stage"><p class="reflect">Recall is about to begin. Use this time to rehearse.</p></div>`;
 }
 
+/** Groups that fit on one row of the grid; keeps rows even so ↑ and ↓ match what is shown. */
+function groupsPerRow(): number {
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const narrow = window.matchMedia('(max-width: 600px)').matches;
+  const cell = (narrow ? 1.8 : 2.1) * rem;
+  const groupGap = (narrow ? 0.6 : 0.9) * rem;
+  const groupWidth = progress.groupSize * cell + (progress.groupSize - 1) * 3;
+  const available = Math.min(app.clientWidth, 52 * rem) - 2 * (narrow ? 0.75 : 1) * rem;
+  return Math.max(1, Math.min(MAX_GROUPS_PER_ROW, Math.floor((available + groupGap) / (groupWidth + groupGap))));
+}
+
 function gridHtml(count: number, render: (index: number) => string): string {
   const size = progress.groupSize;
-  const rowLength = size * GROUPS_PER_ROW;
+  const rowLength = size * groupsPerRow();
   let html = '';
   for (let row = 0; row < count; row += rowLength) {
     html += '<div class="row">';
@@ -421,7 +432,7 @@ function onMemoriseKey(event: KeyboardEvent): boolean {
 }
 
 function onRecallKey(key: string): boolean {
-  const rowLength = progress.groupSize * GROUPS_PER_ROW;
+  const rowLength = progress.groupSize * groupsPerRow();
   const clamp = (n: number) => Math.max(0, Math.min(level - 1, n));
   if (/^[0-9]$/.test(key)) {
     cells[selected] = key;
@@ -484,3 +495,7 @@ window.addEventListener('keydown', (event) => {
 });
 
 render();
+
+window.addEventListener('resize', () => {
+  if (phase === 'recall' || phase === 'result') render();
+});
