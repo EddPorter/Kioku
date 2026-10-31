@@ -23,3 +23,7 @@ npm run dev     # local dev server
 npm test        # unit tests
 npm run build   # type-check and production build
 ```
+
+## Deployment
+
+Pushes to `main` build and deploy to GitHub Pages via `.github/workflows/deploy.yml`. In the repository settings, set **Pages → Source** to **GitHub Actions** once. The build uses relative asset paths, so it works under `/kioku/` without further configuration.
