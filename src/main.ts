@@ -6,7 +6,6 @@ import {
   deleteCell,
   emptyCells,
   generateDigits,
-  groupDigits,
   insertCell,
   scoreRecall,
 } from './game';
@@ -16,6 +15,7 @@ type Phase = 'home' | 'memorise' | 'reflect' | 'recall' | 'result' | 'stats';
 
 const MAX_GROUPS_PER_ROW = 5;
 const MAX_UNCHUNKED_PER_ROW = 10;
+const ROWS_PER_PAGE = 4;
 const DOUBLE_PRESS_MS = 600;
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -24,7 +24,7 @@ let progress = loadProgress();
 let phase: Phase = 'home';
 let level = progress.level;
 let target = '';
-let groupIndex = 0;
+let pageIndex = 0;
 let lastRightAt = -Infinity;
 let cells: string[] = [];
 let selected = 0;
@@ -78,7 +78,7 @@ function stopTimer(): number {
 
 function startRound(): void {
   target = generateDigits(level);
-  groupIndex = 0;
+  pageIndex = 0;
   lastRightAt = -Infinity;
   phase = 'memorise';
   render();
@@ -165,7 +165,7 @@ function homeHtml(): string {
       <h2>Controls</h2>
       <h3>Memorise</h3>
       <ul>
-        <li><kbd>→</kbd> next group, <kbd>←</kbd> previous group</li>
+        <li>The whole number is shown at once; longer numbers are split into pages. <kbd>→</kbd> next page, <kbd>←</kbd> previous page</li>
         <li><kbd>Space</kbd> or <kbd>↑</kbd> back to the start</li>
         <li>Stop the timer: <kbd>→</kbd> twice quickly at the end, the Finished button, or <kbd>Enter</kbd></li>
       </ul>
@@ -180,18 +180,20 @@ function homeHtml(): string {
 }
 
 function memoriseHtml(): string {
-  const groups = groupDigits(target, progress.groupSize);
-  const atEnd = groupIndex === groups.length - 1;
+  const from = pageIndex * pageSize();
+  const to = Math.min(target.length, from + pageSize());
+  const pages = pageCount();
+  const atEnd = pageIndex === pages - 1;
+  const grid = gridHtml(from, to, (i) => `<span class="cell">${target[i]}</span>`);
   return `
     ${timerHtml('Memorise', 'Finished (Enter)')}
     <div class="stage">
-      <div class="big-digits" data-action="next">${groups[groupIndex]}</div>
-      <div class="progress">${groupIndex + 1} / ${groups.length}</div>
+      <div class="grid show" data-action="next">${grid}</div>
+      ${pages > 1 ? `<div class="progress">Page ${pageIndex + 1} / ${pages}</div>` : ''}
       <p class="hint">${atEnd ? 'Press → again to finish' : '&nbsp;'}</p>
       <div class="actions">
-        <button data-action="prev">← Back</button>
-        <button data-action="next">Next →</button>
-        <button data-action="restart">Start of number</button>
+        ${pages > 1 ? '<button data-action="prev">← Back</button><button data-action="next">Next →</button>' : ''}
+        <button data-action="finish" class="primary">Finished (Enter)</button>
       </div>
     </div>`;
 }
@@ -214,15 +216,15 @@ function groupsPerRow(): number {
   return Math.max(1, Math.min(unchunked ? MAX_UNCHUNKED_PER_ROW : MAX_GROUPS_PER_ROW, Math.floor((available + groupGap) / (groupWidth + groupGap))));
 }
 
-function gridHtml(count: number, render: (index: number) => string): string {
+function gridHtml(from: number, to: number, render: (index: number) => string): string {
   const size = progress.groupSize;
   const rowLength = size * groupsPerRow();
   let html = '';
-  for (let row = 0; row < count; row += rowLength) {
+  for (let row = from; row < to; row += rowLength) {
     html += `<div class="row${size === 1 ? ' tight' : ''}">`;
-    for (let g = row; g < Math.min(count, row + rowLength); g += size) {
+    for (let g = row; g < Math.min(to, row + rowLength); g += size) {
       html += '<span class="group">';
-      for (let i = g; i < Math.min(count, g + size); i++) html += render(i);
+      for (let i = g; i < Math.min(to, g + size); i++) html += render(i);
       html += '</span>';
     }
     html += '</div>';
@@ -249,6 +251,7 @@ function keypadHtml(): string {
 
 function recallHtml(): string {
   const grid = gridHtml(
+    0,
     level,
     (i) => `<span class="cell${i === selected ? ' selected' : ''}" data-index="${i}">${cells[i]}</span>`,
   );
@@ -260,7 +263,7 @@ function recallHtml(): string {
 
 function resultHtml(): string {
   const a = lastAttempt!;
-  const grid = gridHtml(a.level, (i) => {
+  const grid = gridHtml(0, a.level, (i) => {
     const ok = cells[i] === target[i];
     const wrong = cells[i] ? `<small>${cells[i]}</small>` : '<small>·</small>';
     return `<span class="cell ${ok ? 'ok' : 'bad'}">${target[i]}${ok ? '' : wrong}</span>`;
@@ -329,8 +332,12 @@ function render(): void {
 
 // ---- input -----------------------------------------------------------------
 
-function groupCount(): number {
-  return Math.ceil(target.length / progress.groupSize);
+function pageSize(): number {
+  return progress.groupSize * groupsPerRow() * ROWS_PER_PAGE;
+}
+
+function pageCount(): number {
+  return Math.ceil(target.length / pageSize());
 }
 
 function finishAction(): void {
@@ -368,15 +375,14 @@ app.addEventListener('click', (event) => {
       render();
       break;
     case 'prev':
-      groupIndex = Math.max(0, groupIndex - 1);
+      pageIndex = Math.max(0, pageIndex - 1);
       render();
       break;
     case 'next':
       advance();
       break;
-    case 'restart':
-      groupIndex = 0;
-      render();
+    case 'finish':
+      finishMemorise();
       break;
     case 'reset':
       if (confirm('Delete all progress and statistics?')) {
@@ -401,8 +407,8 @@ app.addEventListener('change', (event) => {
 /** Move to the next group; a second quick press at the end stops the timer. */
 function advance(): void {
   const now = performance.now();
-  if (groupIndex < groupCount() - 1) {
-    groupIndex++;
+  if (pageIndex < pageCount() - 1) {
+    pageIndex++;
     lastRightAt = -Infinity;
   } else if (now - lastRightAt < DOUBLE_PRESS_MS) {
     return finishMemorise();
@@ -418,11 +424,11 @@ function onMemoriseKey(event: KeyboardEvent): boolean {
       advance();
       return true;
     case 'ArrowLeft':
-      groupIndex = Math.max(0, groupIndex - 1);
+      pageIndex = Math.max(0, pageIndex - 1);
       break;
     case ' ':
     case 'ArrowUp':
-      groupIndex = 0;
+      pageIndex = 0;
       break;
     case 'Enter':
       return (finishMemorise(), true);
@@ -499,5 +505,6 @@ window.addEventListener('keydown', (event) => {
 render();
 
 window.addEventListener('resize', () => {
-  if (phase === 'recall' || phase === 'result') render();
+  if (phase === 'memorise') pageIndex = Math.min(pageIndex, pageCount() - 1);
+  if (phase === 'memorise' || phase === 'recall' || phase === 'result') render();
 });

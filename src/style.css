@@ -87,7 +87,6 @@ ul { margin: 0.25rem 0; padding-left: 1.25rem; }
 
 .stage { text-align: center; padding: 1.5rem 0; }
 .stage .actions { justify-content: center; }
-.big-digits { font: clamp(3rem, 16vw, 7rem) var(--mono); letter-spacing: 0.1em; padding-left: 0.1em; }
 .progress { color: var(--muted); font-variant-numeric: tabular-nums; }
 .reflect { font-size: 1.2rem; color: var(--muted); }
 
@@ -124,8 +123,9 @@ table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
 th { color: var(--muted); font-weight: 500; }
 
-button, .cell, .big-digits { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.big-digits { cursor: pointer; user-select: none; }
+button, .cell, .grid.show { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.grid.show { cursor: pointer; user-select: none; display: inline-block; text-align: left; }
+.show .cell { font-size: 1.6rem; }
 
 .keypad {
   position: sticky;

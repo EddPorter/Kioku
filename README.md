@@ -10,7 +10,7 @@ Each round has three stages, any of which can be ended early: 60 s to memorise, 
 
 | Stage | Controls |
 | --- | --- |
-| Memorise | `→` / `←` step through groups; `Space` or `↑` returns to the start; `Enter`, the Finished button, or `→` twice quickly at the end stops the timer |
+| Memorise | The number is shown as a grid, laid out as in recall; `→` / `←` change page when it does not fit; `Space` or `↑` returns to the start; `Enter`, the Finished button, or `→` twice quickly at the end stops the timer |
 | Recall | Click a cell or use arrow keys; type `0`–`9`; `Backspace` deletes to the left; `+` inserts an item; `-` deletes one; `Enter` submits |
 
 On touch devices the recall stage shows an on-screen keypad, and tapping the digits advances through the memorise stage. Progress and statistics are stored in the browser's `localStorage`; there is no backend.
