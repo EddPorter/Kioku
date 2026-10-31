@@ -142,7 +142,7 @@ function homeHtml(): string {
   const levelOptions = Array.from({ length: progress.unlocked }, (_, i) => i + 1)
     .map((n) => `<option value="${n}"${n === level ? ' selected' : ''}>Level ${n}</option>`)
     .join('');
-  const groupOptions = [2, 3, 4, 5]
+  const groupOptions = [2, 3, 4, 5, 6]
     .map((n) => `<option value="${n}"${n === progress.groupSize ? ' selected' : ''}>${n}</option>`)
     .join('');
   return `
