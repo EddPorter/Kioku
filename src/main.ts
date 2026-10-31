@@ -15,6 +15,7 @@ import { Attempt, computeStats, loadProgress, recordAttempt, saveProgress } from
 type Phase = 'home' | 'memorise' | 'reflect' | 'recall' | 'result' | 'stats';
 
 const MAX_GROUPS_PER_ROW = 5;
+const MAX_UNCHUNKED_PER_ROW = 10;
 const DOUBLE_PRESS_MS = 600;
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -142,7 +143,7 @@ function homeHtml(): string {
   const levelOptions = Array.from({ length: progress.unlocked }, (_, i) => i + 1)
     .map((n) => `<option value="${n}"${n === level ? ' selected' : ''}>Level ${n}</option>`)
     .join('');
-  const groupOptions = [2, 3, 4, 5, 6]
+  const groupOptions = [1, 2, 3, 4, 5, 6]
     .map((n) => `<option value="${n}"${n === progress.groupSize ? ' selected' : ''}>${n}</option>`)
     .join('');
   return `
@@ -206,10 +207,11 @@ function groupsPerRow(): number {
   const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
   const narrow = window.matchMedia('(max-width: 600px)').matches;
   const cell = (narrow ? 1.8 : 2.1) * rem;
-  const groupGap = (narrow ? 0.6 : 0.9) * rem;
+  const unchunked = progress.groupSize === 1;
+  const groupGap = unchunked ? 3 : (narrow ? 0.6 : 0.9) * rem;
   const groupWidth = progress.groupSize * cell + (progress.groupSize - 1) * 3;
   const available = Math.min(app.clientWidth, 52 * rem) - 2 * (narrow ? 0.75 : 1) * rem;
-  return Math.max(1, Math.min(MAX_GROUPS_PER_ROW, Math.floor((available + groupGap) / (groupWidth + groupGap))));
+  return Math.max(1, Math.min(unchunked ? MAX_UNCHUNKED_PER_ROW : MAX_GROUPS_PER_ROW, Math.floor((available + groupGap) / (groupWidth + groupGap))));
 }
 
 function gridHtml(count: number, render: (index: number) => string): string {
@@ -217,7 +219,7 @@ function gridHtml(count: number, render: (index: number) => string): string {
   const rowLength = size * groupsPerRow();
   let html = '';
   for (let row = 0; row < count; row += rowLength) {
-    html += '<div class="row">';
+    html += `<div class="row${size === 1 ? ' tight' : ''}">`;
     for (let g = row; g < Math.min(count, row + rowLength); g += size) {
       html += '<span class="group">';
       for (let i = g; i < Math.min(count, g + size); i++) html += render(i);

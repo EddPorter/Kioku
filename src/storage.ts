@@ -19,7 +19,7 @@ export interface Progress {
 const KEY = 'kioku:v1';
 
 export function defaultProgress(): Progress {
-  return { level: 1, unlocked: 1, groupSize: 3, attempts: [] };
+  return { level: 1, unlocked: 1, groupSize: 1, attempts: [] };
 }
 
 /** Pure: returns the progress after recording an attempt. */
