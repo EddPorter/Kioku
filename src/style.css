@@ -122,3 +122,29 @@ ul { margin: 0.25rem 0; padding-left: 1.25rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
 th { color: var(--muted); font-weight: 500; }
+
+button, .cell, .big-digits { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.big-digits { cursor: pointer; user-select: none; }
+
+.keypad {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding: 0.5rem 0 0.75rem;
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  max-width: 24rem;
+}
+.keypad .digits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.keypad .edit { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+.key { font: 1.4rem var(--mono); padding: 0.7rem 0; user-select: none; }
+.key.util { font: 1rem system-ui, sans-serif; color: var(--muted); }
+.edit .key.util { padding: 0.55rem 0; }
+
+@media (max-width: 600px) {
+  #app { padding-inline: 0.75rem; }
+  .row { gap: 0.6rem; }
+  .cell { width: 1.8rem; height: 2.4rem; font-size: 1.2rem; }
+  .stage .actions button { flex: 1; padding: 0.8rem 0.5rem; }
+  .keypad { max-width: none; }
+}

@@ -13,7 +13,7 @@ Each round has three stages, any of which can be ended early: 60 s to memorise, 
 | Memorise | `→` / `←` step through groups; `Space` or `↑` returns to the start; `Enter`, the Finished button, or `→` twice quickly at the end stops the timer |
 | Recall | Click a cell or use arrow keys; type `0`–`9`; `Backspace` deletes to the left; `+` inserts an item; `-` deletes one; `Enter` submits |
 
-Progress and statistics are stored in the browser's `localStorage`; there is no backend.
+On touch devices the recall stage shows an on-screen keypad, and tapping the digits advances through the memorise stage. Progress and statistics are stored in the browser's `localStorage`; there is no backend.
 
 ## Development
 
@@ -26,4 +26,6 @@ npm run build   # type-check and production build
 
 ## Deployment
 
-Pushes to `main` build and deploy to GitHub Pages via `.github/workflows/deploy.yml`. In the repository settings, set **Pages → Source** to **GitHub Actions** once. The build uses relative asset paths, so it works under `/kioku/` without further configuration.
+Pushes to `main` build and deploy to GitHub Pages via `.github/workflows/deploy.yml`. In the repository settings, set **Pages → Source** to **GitHub Actions** once. The build uses relative asset paths, so it works under `/Kioku/` without further configuration.
+
+Live site: https://eddporter.github.io/Kioku/ (the path is case-sensitive).

@@ -24,7 +24,7 @@ let phase: Phase = 'home';
 let level = progress.level;
 let target = '';
 let groupIndex = 0;
-let lastRightAt = 0;
+let lastRightAt = -Infinity;
 let cells: string[] = [];
 let selected = 0;
 let memoriseSeconds = 0;
@@ -78,7 +78,7 @@ function stopTimer(): number {
 function startRound(): void {
   target = generateDigits(level);
   groupIndex = 0;
-  lastRightAt = 0;
+  lastRightAt = -Infinity;
   phase = 'memorise';
   render();
   startTimer(MEMORISE_SECONDS, finishMemorise);
@@ -184,7 +184,7 @@ function memoriseHtml(): string {
   return `
     ${timerHtml('Memorise', 'Finished (Enter)')}
     <div class="stage">
-      <div class="big-digits">${groups[groupIndex]}</div>
+      <div class="big-digits" data-action="next">${groups[groupIndex]}</div>
       <div class="progress">${groupIndex + 1} / ${groups.length}</div>
       <p class="hint">${atEnd ? 'Press → again to finish' : '&nbsp;'}</p>
       <div class="actions">
@@ -217,6 +217,23 @@ function gridHtml(count: number, render: (index: number) => string): string {
   return html;
 }
 
+function keypadHtml(): string {
+  const key = (k: string, label: string, extra = '') =>
+    `<button class="key${extra}" data-key="${k}" aria-label="${label}">${label}</button>`;
+  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => key(d, d)).join('');
+  return `
+    <div class="keypad">
+      <div class="digits">
+        ${digits}
+        ${key('Backspace', '⌫', ' util')}${key('0', '0')}${key('Enter', 'Done', ' util')}
+      </div>
+      <div class="edit">
+        ${key('ArrowLeft', '←', ' util')}${key('ArrowRight', '→', ' util')}
+        ${key('+', 'Insert +', ' util')}${key('-', 'Delete −', ' util')}
+      </div>
+    </div>`;
+}
+
 function recallHtml(): string {
   const grid = gridHtml(
     level,
@@ -224,7 +241,8 @@ function recallHtml(): string {
   );
   return `
     ${timerHtml('Recall', 'Submit (Enter)')}
-    <div class="grid recall" id="grid">${grid}</div>`;
+    <div class="grid recall" id="grid">${grid}</div>
+    ${keypadHtml()}`;
 }
 
 function resultHtml(): string {
@@ -315,6 +333,11 @@ app.addEventListener('click', (event) => {
     render();
     return;
   }
+  const key = (event.target as HTMLElement).closest<HTMLElement>('[data-key]')?.dataset.key;
+  if (key && phase === 'recall') {
+    onRecallKey(key);
+    return;
+  }
   const action = (event.target as HTMLElement).closest<HTMLElement>('[data-action]')?.dataset.action;
   switch (action) {
     case 'start':
@@ -336,8 +359,7 @@ app.addEventListener('click', (event) => {
       render();
       break;
     case 'next':
-      groupIndex = Math.min(groupCount() - 1, groupIndex + 1);
-      render();
+      advance();
       break;
     case 'restart':
       groupIndex = 0;
@@ -363,15 +385,25 @@ app.addEventListener('change', (event) => {
   render();
 });
 
+/** Move to the next group; a second quick press at the end stops the timer. */
+function advance(): void {
+  const now = performance.now();
+  if (groupIndex < groupCount() - 1) {
+    groupIndex++;
+    lastRightAt = -Infinity;
+  } else if (now - lastRightAt < DOUBLE_PRESS_MS) {
+    return finishMemorise();
+  } else {
+    lastRightAt = now;
+  }
+  render();
+}
+
 function onMemoriseKey(event: KeyboardEvent): boolean {
   switch (event.key) {
-    case 'ArrowRight': {
-      const now = performance.now();
-      if (groupIndex < groupCount() - 1) groupIndex++;
-      else if (now - lastRightAt < DOUBLE_PRESS_MS) return (finishMemorise(), true);
-      lastRightAt = now;
-      break;
-    }
+    case 'ArrowRight':
+      advance();
+      return true;
     case 'ArrowLeft':
       groupIndex = Math.max(0, groupIndex - 1);
       break;
@@ -388,14 +420,14 @@ function onMemoriseKey(event: KeyboardEvent): boolean {
   return true;
 }
 
-function onRecallKey(event: KeyboardEvent): boolean {
+function onRecallKey(key: string): boolean {
   const rowLength = progress.groupSize * GROUPS_PER_ROW;
   const clamp = (n: number) => Math.max(0, Math.min(level - 1, n));
-  if (/^[0-9]$/.test(event.key)) {
-    cells[selected] = event.key;
+  if (/^[0-9]$/.test(key)) {
+    cells[selected] = key;
     selected = clamp(selected + 1);
   } else {
-    switch (event.key) {
+    switch (key) {
       case 'ArrowLeft':
         selected = clamp(selected - 1);
         break;
@@ -443,7 +475,7 @@ window.addEventListener('keydown', (event) => {
     startRecall();
     handled = true;
   } else if (phase === 'recall') {
-    handled = onRecallKey(event);
+    handled = onRecallKey(event.key);
   } else if ((phase === 'home' || phase === 'result') && event.key === 'Enter') {
     startRound();
     handled = true;
